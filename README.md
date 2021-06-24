@@ -1,5 +1,37 @@
 # NLP QA Final Project
 
+## How to Run
+Check notebooks/CS388_FP_more_runs.ipynb for how to run the improved version with dep or tag. Check notebooks/CS388_FP_Origin.ipynb for the original version as a benchmark. Please run both scripts on Google Colab with GPU session to replicate the same results.
+
+## Files Modified
+The follwing files are modified for the improvement of DrQA with spaCy parser recognition
+- `main.py`: add parameters for spaCy
+- `model.py`: model structure changed to accommodate spaCy input
+- `data.py`: add spaCy pipeline to dep_ and tag_ recognition
+
+## Results
+By adding spaCy detection on the tag/dep of the input context and questions, and concatenating the embeddings from spacy with the glove embeddings, we compared the result with the base model.
+For all following experiment, the embedding dim of tag_/dep_ are set to 50. The hidden layer dim is set to 256. Almost all experiments reaches their optimum on dev set after 2 epoches. Check  notebooks/CS388_FP_more_runs.ipynb for experiment detail.
+| Model                   | Hidden Dim | SQuAD Dev EM/F1 | Train Time Per Epoch |     Data Prep Time    |
+|------------------------------|:----------:|:----------:|:---------------:|:-----------------:|
+| baseline |     100    |   48.18/60.82   |       83s      |   7.6s |
+| baseline |     200    |   48.64/61.32   |       97s      |   7.6s |
+| baseline |     300    |   49.27/61.44   |       115s     |   7.5s  | 
+| tag_ & en_core_web_sm |     100    |   50.63/63.21  |    90s   |   913.9s  |
+| tag_ & en_core_web_sm |     200    |   52.1/64.51   |    107s  |   932.9s  |
+| tag_ & en_core_web_sm |     300    |   51.3/63.97   |    126s  |   919.1s |
+| tag_ & en_core_web_lg |     100    |   51.77/64.39  |    94s   |   1028.7s  |
+| tag_ & en_core_web_lg |     200    |   51.26/64.11   |    110s  |  1037.0s  |
+| tag_ & en_core_web_lg |     300    |   51.58/63.98   |    129s  |  998.4s|
+| dep_ & en_core_web_sm |     100    |   50.99/63.79   |    92s   |  880.2s|
+| dep_ & en_core_web_sm |     200    |   50.9/63.48   |    107s   |  938.2s|
+| dep_ & en_core_web_sm |     300    |   51.8/64.19   |    126s   | 943.1s   |
+| dep_ & en_core_web_lg |     100    |   51.78/64.19   |   96s     |   1043.2s|
+| dep_ & en_core_web_lg |     200    |   52.09/64.33   |   109s    |   1029.8s|
+| dep_ & en_core_web_lg |     300    |   52.22/64.68   |   129s    |   983.0s|
+
+
+## Original Project Discription
 This repository contains starter code for the Natural Language Processing final project on question answering. For specific details on deliverables and deadlines, please refer to the final project spec posted on the course website.
 
 Authors: Shrey Desai, Yasumasa Onoe, and Greg Durrett

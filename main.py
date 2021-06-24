@@ -23,6 +23,7 @@ Author:
 import argparse
 import pprint
 import json
+import time
 
 import torch
 import numpy as np
@@ -164,12 +165,43 @@ parser.add_argument(
     default=50000,
     help='vocabulary size (dynamically set, do not change!)',
 )
+
+
 parser.add_argument(
     '--embedding_dim',
     type=int,
     default=300,
     help='embedding dimension',
 )
+
+parser.add_argument(
+    '--embedding_dim_spy',
+    type=int,
+    default=50,
+    help='embedding dimension for spy',
+)
+
+parser.add_argument(
+    '--vocab_size_spy',
+    type=int,
+    default=50,
+    help='Spacy tag/dep num (dynamically set, do not change!)',
+)
+
+parser.add_argument(
+    '--spy_type',
+    type=str,
+    default="dep",
+    help='dep or tag',
+)
+
+parser.add_argument(
+    '--spy_model_type',
+    type=str,
+    default='en_core_web_sm',
+    help='embedding dimension',
+)
+
 parser.add_argument(
     '--hidden_dim',
     type=int,
@@ -421,7 +453,7 @@ def write_predictions(args, model, dataset):
             for j in range(start_logits.size(0)):
                 # Find question index and passage.
                 sample_index = args.batch_size * i + j
-                qid, passage, _, _, _ = dataset.samples[sample_index]
+                qid, passage, _, _, _, _, _ = dataset.samples[sample_index]
 
                 # Unpack start and end probabilities. Find the constrained
                 # (start, end) pair that has the highest joint probability.
@@ -450,6 +482,7 @@ def main(args):
     Args:
         args: `argparse` object.
     """
+    start_train = time.time()
     # Print arguments.
     print('\nusing arguments:')
     _print_arguments(args)
@@ -461,9 +494,12 @@ def main(args):
         print()
 
     # Set up datasets.
-    train_dataset = QADataset(args, args.train_path)
-    dev_dataset = QADataset(args, args.dev_path)
-
+    start_load_dataset = time.time()
+    train_dataset = QADataset(args, args.train_path, args.spy_model_type)
+    dev_dataset = QADataset(args, args.dev_path, args.spy_model_type)
+    end_load_dataset = time.time()
+    print("load data set train and dev takes {}".format(end_load_dataset - start_load_dataset))
+    print("dataset ready")
     # Create vocabulary and tokenizer.
     vocabulary = Vocabulary(train_dataset.samples, args.vocab_size)
     tokenizer = Tokenizer(vocabulary)
@@ -477,6 +513,12 @@ def main(args):
     print(f'train samples = {len(train_dataset)}')
     print(f'dev samples = {len(dev_dataset)}')
     print()
+
+    # set up vocab_size_spy based on spy_type 
+    if args.spy_type == "tag":
+       args.vocab_size_spy =  len(vocabulary.tag_list)
+    elif args.spy_type == "dep":
+        args.vocab_size_spy =  len(vocabulary.dep_list)
 
     # Select model.
     model = _select_model(args)
@@ -506,6 +548,7 @@ def main(args):
 
         # Begin training.
         for epoch in range(1, args.epochs + 1):
+            start_epoch =  time.time()
             # Perform training and evaluation steps.
             train_loss = train(args, epoch, model, train_dataset)
             eval_loss = evaluate(args, epoch, model, dev_dataset)
@@ -524,6 +567,8 @@ def main(args):
                 f"{'saving model!' if eval_history[-1] else ''}"
             )
 
+            end_epoch = time.time()
+            print("epoch {} takes {}".format(epoch, end_epoch - start_epoch))
             # If early stopping conditions are met, stop training.
             if _early_stop(args, eval_history):
                 suffix = 's' if args.early_stop > 1 else ''
@@ -533,7 +578,9 @@ def main(args):
                 )
                 print()
                 break
-
+    
+    end_train = time.time()
+    print("train takes {}".format(end_train - start_train))
     if args.do_test:
         # Write predictions to the output file. Use the printed command
         # below to obtain official EM/F1 metrics.
